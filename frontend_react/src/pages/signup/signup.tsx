@@ -1,17 +1,38 @@
 import React, { useState } from "react";
 import { FaCheckDouble } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+import { GoogleOAuthProvider, GoogleLogin, GoogleCredentialResponse } from "@react-oauth/google";
 import { Button, Row, Col, Typography, Input, Flex, notification } from "antd";
 import "antd/dist/reset.css";
+
 const { Title, Text } = Typography;
 
+interface FormData {
+  fullname: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  fullname: string;
+  avatar?: string;
+  role: string;
+  status: string;
+}
+
 export default function SignUp() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     fullname: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -28,6 +49,38 @@ export default function SignUp() {
       return;
     }
 
+    if (!formData.fullname.trim()) {
+      notification.warning({
+        message: "Lỗi!",
+        description: "Họ và tên không được để trống!",
+        placement: "topRight",
+        duration: 2,
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      notification.warning({
+        message: "Lỗi!",
+        description: "Vui lòng nhập email hợp lệ!",
+        placement: "topRight",
+        duration: 2,
+      });
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      notification.warning({
+        message: "Lỗi!",
+        description: "Mật khẩu phải có ít nhất 6 ký tự!",
+        placement: "topRight",
+        duration: 2,
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
       const response = await fetch("http://localhost:5000/api/v1/auth/signup", {
         method: "POST",
@@ -39,7 +92,7 @@ export default function SignUp() {
         }),
       });
 
-      const data = await response.json(); // Log response từ server
+      const data = await response.json();
       console.log("Response:", data);
 
       if (!response.ok) {
@@ -71,7 +124,81 @@ export default function SignUp() {
         placement: "topRight",
         duration: 2,
       });
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = (credentialResponse: GoogleCredentialResponse) => {
+    const idToken = credentialResponse.credential;
+    console.log("Sending idToken to backend:", idToken);
+    fetch("http://localhost:5000/api/v1/auth/google", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+    })
+      .then((res) => {
+        console.log("Response status:", res.status);
+        console.log("Response headers:", res.headers);
+        if (!res.ok) {
+          return res.text().then((text) => {
+            throw new Error(`Server error: ${res.status} - ${text}`);
+          });
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          setUser({
+            id: data.user.id,
+            email: data.user.email,
+            fullname: data.user.fullname,
+            avatar: data.user.avatar,
+            role: data.user.role,
+            status: data.user.status,
+          });
+          localStorage.setItem("accessToken", data.accessToken);
+          localStorage.setItem("accountID", data.user.id);
+          notification.success({
+            message: "Đăng ký/Đăng nhập bằng Google thành công!",
+            description: "Chào mừng bạn quay trở lại!",
+            placement: "topRight",
+            duration: 2,
+            onClose: () => {
+              setTimeout(() => {
+                if (data.user.role === "admin") {
+                  window.location.href = "/admin";
+                } else {
+                  window.location.href = "/";
+                }
+              }, 2000);
+            },
+          });
+          setFormData({
+            fullname: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+          });
+        } else {
+          console.error("Login failed:", data.message);
+          notification.error({
+            message: "Đăng nhập thất bại!",
+            description: data.message || "Có lỗi xảy ra khi đăng nhập bằng Google.",
+            placement: "topRight",
+            duration: 2,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("Error:", err);
+        notification.error({
+          message: "Lỗi!",
+          description: err.message || "Có lỗi xảy ra khi kết nối với Google.",
+          placement: "topRight",
+          duration: 2,
+        });
+      });
   };
 
   return (
@@ -125,7 +252,7 @@ export default function SignUp() {
           </div>
         </Col>
         {/* Right */}
-        <Col className="flex w-full flex-col justify-between shadow-inner lg:w-[400px]">
+        <Col className="flex w-full flex-col justify-between shadow-inner lg:w-[400px] overflow-auto">
           <div>
             <div className="mb-3 flex h-10 sm:h-12">
               <button
@@ -172,18 +299,28 @@ export default function SignUp() {
               <Flex justify="space-between" className="mb-2 w-full">
                 <button
                   onClick={handleSubmit}
-                  className="h-9 w-[48%] rounded-md bg-black text-xs text-white hover:bg-[#22A6DF] sm:h-10 sm:text-sm"
+                  className="h-9 w-[46%] rounded-md bg-black text-xs text-white hover:bg-[#22A6DF] sm:h-10 sm:text-sm"
+                  disabled={loading}
                 >
-                  Tạo tài khoản
+                  {loading ? "Đang xử lý..." : "Tạo tài khoản"}
                 </button>
                 <span className="my-auto px-1 text-sm sm:text-base">Hoặc</span>
-                <Button
-                  type="default"
-                  icon={<FcGoogle className="h-6 w-6 sm:h-8 sm:w-8" />}
-                  className="flex h-9 w-[48%] items-center justify-center text-xs sm:h-10 sm:text-sm"
-                >
-                  Google
-                </Button>
+                <GoogleOAuthProvider clientId="518751281700-f8vq0pf1792lcv7risc93qd5b6ccb70g.apps.googleusercontent.com">
+                  <GoogleLogin
+                    onSuccess={handleGoogleLogin}
+                    size="medium"
+                    width={36}
+                    type="standard"
+                    onError={() => {
+                      notification.error({
+                        message: "Đăng nhập thất bại!",
+                        description: "Có lỗi xảy ra khi đăng nhập bằng Google.",
+                        placement: "topRight",
+                        duration: 2,
+                      });
+                    }}
+                  />
+                </GoogleOAuthProvider>
               </Flex>
             </div>
 

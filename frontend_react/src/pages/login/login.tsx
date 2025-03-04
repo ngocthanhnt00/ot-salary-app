@@ -23,6 +23,8 @@ import {
   Modal,
 } from "antd";
 import "antd/dist/reset.css";
+import { progress } from "framer-motion";
+import ENV_VARS from "../../../config";
 const { Title, Text } = Typography;
 
 interface User {
@@ -82,13 +84,16 @@ export default function Login() {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/v1/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        `${ENV_VARS.VITE_API_URL}/api/v1/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       const data = await response.json();
       console.log("Phản hồi từ API:", response, data);
@@ -123,8 +128,15 @@ export default function Login() {
           placement: "topRight",
           duration: 1.5,
           onClose: () => {
+
+            localStorage.setItem("accessToken", data.accessToken);
+            localStorage.setItem(
+              "accountID",
+              JSON.stringify(data.userData._id)
+            );
+            localStorage.setItem("userData", JSON.stringify(data.userData));
             setTimeout(() => {
-              if (userData.role === "admin") {
+              if (data.userData.role === "admin") {
                 window.location.href = "/admin";
               } else {
                 window.location.href = "/";

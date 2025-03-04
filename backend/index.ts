@@ -10,6 +10,7 @@ import categoryRouter from './src/routes/category.routes.js';
 import productRouter from './src/routes/product.routes.js';
 import userRouter from './src/routes/user.routes.js';
 import { errorHandler } from './src/middlewares/errorHandler';
+import brandRouter from './src/routes/brand.routes.js';
 
 dotenv.config(); // Đọc file .env
 console.log('GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
@@ -33,9 +34,10 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/', categoryRouter);
-app.use('/api/v1/', productRouter);
-app.use('/api/v1/', userRouter);
+app.use('/api/v1', categoryRouter);
+app.use('/api/v1', productRouter);
+app.use('/api/v1', userRouter);
+app.use('/api/v1', brandRouter);
 
 app.use(errorHandler);
 

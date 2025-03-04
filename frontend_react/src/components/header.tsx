@@ -114,9 +114,9 @@ export default function Header() {
       })
       .catch((err) => {
         console.error("Error fetching user:", err);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("accountID");
-        localStorage.removeItem("userData");
+        // localStorage.removeItem("accessToken");
+        // localStorage.removeItem("accountID");
+        // localStorage.removeItem("userData");
       });
   }, []);
 
@@ -224,8 +224,8 @@ export default function Header() {
               <Dropdown overlay={userMenu} trigger={["hover"]}>
                 <div className="flex items-center cursor-pointer">
                   <Avatar
-                    src={`/images/avatar/${user.avatar}` } 
-                    icon={!user.avatar && <FaUserAlt />} 
+                    src={`/images/avatar/${user.avatar}`}
+                    icon={!user.avatar && <FaUserAlt />}
                     className="bg-[#22A6DF]"
                   />
                   <FaAngleDown className="ml-1 text-[#22A6DF]" />
@@ -254,7 +254,7 @@ export default function Header() {
               <Dropdown overlay={userMenu} trigger={["hover"]}>
                 <div className="flex items-center cursor-pointer">
                   <Avatar
-                    src={"/images/avatar/avatar.png" } 
+                    src={`/images/avatar/${user.avatar}`}
                     icon={!user.avatar && <FaUserAlt />}
                     className="bg-[#22A6DF]"
                   />

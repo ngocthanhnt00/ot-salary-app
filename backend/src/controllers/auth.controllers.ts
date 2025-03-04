@@ -105,6 +105,10 @@ export const loginController = async (req: Request, res: Response): Promise<void
       res.status(404).json({ success: false, message: 'user is not defined' });
       return;
     }
+    if (user.status === 'inactive') {
+      res.status(401).json({ success: false, message: 'Tài khoản của bạn đã bị khóa' });
+      return;
+    }
 
     const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) {
@@ -114,9 +118,8 @@ export const loginController = async (req: Request, res: Response): Promise<void
     const { password: pass, ...userData } = user.toObject();
     userData.role = user.role || 'user';
     userData.status = user.status || 'active';
-    const accessToken = generateAccessToken(user._id, res);
-    const refreshToken = generateRefreshToken(user._id, res);
-    res.status(200).json({ success: true, userData: userData, accessToken });
+    const accessToken = await generateAccessToken(user._id, res);
+    const refreshToken = await generateRefreshToken(user._id, res);
     await userModel.findByIdAndUpdate(user._id, { refreshToken }, { new: true });
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
