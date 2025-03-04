@@ -1,4 +1,4 @@
-import { CookieOptions, Request, Response } from 'express';
+import { CookieOptions, Request, Response, RequestHandler, NextFunction } from 'express';
 import bcryptjs from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
@@ -6,6 +6,19 @@ import sendEmail from '../utils/sendEmail';
 import userModel from '../models/user.model'; // Adjust the path according to your project structure
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js'; // Adjust the path according to your project structure
 import ENV_VARS from '../config';
+import { OAuth2Client, TokenPayload } from 'google-auth-library';
+import { IUser } from '../interfaces/user.interface';
+import { UserRoles, UserStatus } from '../enums/user.enum';
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+interface User {
+  _id: string;
+  role: string;
+  status: string;
+}
+export interface CustomRequest extends Request {
+  user?: IUser;
+}
 
 export const signupController = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -87,7 +100,7 @@ export const loginController = async (req: Request, res: Response): Promise<void
     console.log('Password', password);
     const user = await userModel
       .findOne({ email })
-      .select('-reset_password_token -reset_password_expires -refreshToken -role');
+      .select('-reset_password_token -reset_password_expires -refreshToken');
     if (!user) {
       res.status(404).json({ success: false, message: 'user is not defined' });
       return;
@@ -99,9 +112,11 @@ export const loginController = async (req: Request, res: Response): Promise<void
       return;
     }
     const { password: pass, ...userData } = user.toObject();
-
-    const accessToken = await generateAccessToken(user._id, res);
-    const refreshToken = await generateRefreshToken(user._id, res);
+    userData.role = user.role || 'user';
+    userData.status = user.status || 'active';
+    const accessToken = generateAccessToken(user._id, res);
+    const refreshToken = generateRefreshToken(user._id, res);
+    res.status(200).json({ success: true, userData: userData, accessToken });
     await userModel.findByIdAndUpdate(user._id, { refreshToken }, { new: true });
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
@@ -272,4 +287,112 @@ export const refreshTokenController = async (req: Request, res: Response): Promi
     console.error('Error in refreshTokenController:', error);
     res.status(500).json({ success: false, message: 'Internal Server Error' });
   }
+};
+// GOOGLE LOGIN
+export const googleLogin: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+  const { idToken } = req.body;
+
+  try {
+    console.log('Received idToken:', idToken);
+    if (!idToken) {
+      res.status(400).json({ success: false, message: 'No idToken provided' });
+      return;
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    const payload = ticket.getPayload() as unknown as TokenPayload;
+    const { sub: googleId, email, name, picture: avatar } = payload;
+
+    let user = (await userModel.findOne({ googleId })) || (await userModel.findOne({ email }));
+    if (!user) {
+      // Tạo user mới mà không cần password
+      user = new userModel({
+        googleId,
+        email,
+        fullname: name,
+        avatar
+        // Không cần pass vì Google ko dùng password
+      });
+      await user.save();
+    } else {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not defined');
+    }
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const userData = {
+      id: user._id,
+      email: user.email,
+      fullname: user.fullname,
+      avatar: user.avatar,
+      role: user.role,
+      status: user.status
+    };
+    res.json({ success: true, accessToken: token, user: userData });
+  } catch (error) {
+    console.error('Google Sign-In error:', error);
+    res.status(401).json({ success: false, message: 'Invalid Google token or server error' });
+  }
+};
+// Check role and status
+export const checkRoleStatus = async (req: CustomRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+      res.status(401).json({ success: false, message: 'No token provided' });
+      return;
+    }
+
+    if (!process.env.JWT_SECRET) {
+      res.status(500).json({ success: false, message: 'JWT_SECRET is not defined' });
+      return;
+    }
+
+    // Xác thực JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET) as jwt.JwtPayload & { userId: string };
+    } catch (error) {
+      res.status(401).json({ success: false, message: 'Invalid token' });
+      return;
+    }
+
+    // Tìm user trong database
+    const user = await userModel.findById(decoded.userId);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    // Kiểm tra status
+    if (user.status !== UserStatus.ACTIVE) {
+      res.status(403).json({ success: false, message: 'User is not active' });
+      return;
+    }
+
+    // Gắn user vào req
+    req.user = user;
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// kiểm tra role ADMIN
+export const checkAdminRole = (req: CustomRequest, res: Response, next: NextFunction): void => {
+  if (!req.user || req.user.role !== UserRoles.ADMIN) {
+    res.status(403).json({ success: false, message: 'Access denied. Admin role required' });
+    return;
+  }
+  next();
 };

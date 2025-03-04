@@ -92,6 +92,7 @@ export default function Header() {
     }
 
     const storedUserData = localStorage.getItem("userData");
+    console.log(storedUserData);
     if (storedUserData) {
       setUser(JSON.parse(storedUserData));
     }

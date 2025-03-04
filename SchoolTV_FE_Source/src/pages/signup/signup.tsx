@@ -1,9 +1,8 @@
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { FaCheckDouble } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
-import { Button, Row, Col, Typography, Input, Flex } from "antd";
-
+import { Button, Row, Col, Typography, Input, Flex, notification } from "antd";
+import "antd/dist/reset.css";
 const { Title, Text } = Typography;
 
 export default function SignUp() {
@@ -20,7 +19,12 @@ export default function SignUp() {
 
   const handleSubmit = async () => {
     if (formData.password !== formData.confirmPassword) {
-      alert("Mật khẩu xác nhận không khớp!");
+      notification.warning({
+        message: "Lỗi xác nhận mật khẩu!",
+        description: "Mật khẩu xác nhận không khớp!",
+        placement: "topRight",
+        duration: 2,
+      });
       return;
     }
 
@@ -42,22 +46,34 @@ export default function SignUp() {
         throw new Error(data.message || "Đăng ký thất bại!");
       }
 
-      alert("Đăng ký thành công!");
-      setFormData({
-        fullname: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
+      notification.success({
+        message: "Đăng ký thành công!",
+        description: "Tài khoản của bạn đã được tạo thành công!",
+        placement: "topRight",
+        duration: 2,
+        onClose: () => {
+          setFormData({
+            fullname: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+          });
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 2000);
+        },
       });
-
-      setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
     } catch (error: any) {
       console.error("Lỗi:", error);
-      alert(`Đã xảy ra lỗi: ${error.message}`);
+      notification.error({
+        message: "Đăng ký thất bại!",
+        description: `Đã xảy ra lỗi: ${error.message}`,
+        placement: "topRight",
+        duration: 2,
+      });
     }
   };
+
   return (
     <div className="px-2 py-4 sm:px-5 sm:py-6">
       {/* Title */}
@@ -66,15 +82,14 @@ export default function SignUp() {
           Đăng Ký
         </Title>
         <Flex justify="center" className="gap-1 sm:gap-2">
-            <span 
-              onMouseEnter={e => {
-                e.currentTarget.style.cursor = 'pointer';
-              }}
-              onClick={() => window.location.href="/"} className="text-sm sm:text-base">
-              Trang chủ 
-            </span>
-            <span className="px-1 sm:px-2">/</span>
-            <span className="text-base sm:text-lg">Đăng ký</span>
+          <span 
+            onMouseEnter={(e) => { e.currentTarget.style.cursor = 'pointer'; }}
+            onClick={() => window.location.href="/"} className="text-sm sm:text-base"
+          >
+            Trang chủ 
+          </span>
+          <span className="px-1 sm:px-2">/</span>
+          <span className="text-base sm:text-lg">Đăng ký</span>
         </Flex>
       </div>
 
