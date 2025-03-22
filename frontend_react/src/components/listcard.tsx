@@ -68,7 +68,7 @@ export default function ListCard({ pros }) {
             className="group relative flex cursor-pointer flex-col justify-between bg-white transition-all border-0 hover:shadow-lg"
             hoverable
             bodyStyle={{ padding: 0 }}
-            style={{ width: 200, height: 314 }}
+            style={{ width: 250, height: 314 }}
           >
             <div className="relative mb-1 flex items-center justify-center">
               {product.discount > 0 && (
@@ -90,12 +90,12 @@ export default function ListCard({ pros }) {
 
             <div className="flex-1 p-2 flex flex-col">
               <div className="h-8 mb-1">
-                <p className="text-left leading-tight text-[#686868] transition-colors duration-300 group-hover:text-[#333] line-clamp-2 text-xs">
+                <p className="text-left leading-tight text-[#686868] transition-colors duration-300 group-hover:text-[#333] line-clamp-2 text-base">
                   {product.name}
                 </p>
               </div>
 
-              <p className="text-sm font-semibold text-[#22A6DF] transition-colors duration-300 group-hover:text-[#1890ff]">
+              <p className="pt-4 text-base font-semibold text-[#22A6DF] transition-colors duration-300 group-hover:text-[#1890ff]">
                 {new Intl.NumberFormat("vi-VN", {
                   style: "currency",
                   currency: "VND",
@@ -104,7 +104,7 @@ export default function ListCard({ pros }) {
                 )}
 
                 {product.discount > 0 && (
-                  <span className="ml-1 text-gray-500 line-through text-[10px]">
+                  <span className="ml-1 text-gray-500 line-through text-sm">
                     {new Intl.NumberFormat("vi-VN", {
                       style: "currency",
                       currency: "VND",
@@ -115,13 +115,10 @@ export default function ListCard({ pros }) {
 
               <div className="relative overflow-hidden mt-1">
                 <Link to={`/detail/${product._id}`}>
-                  <Button
-                    className="w-full uppercase text-[#22A6DF] border border-[#22A6DF] hover:!text-white relative z-10 overflow-hidden before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#22A6DF] before:transition-all before:duration-300 hover:before:left-0 text-xs"
-                    size="small"
-                  >
-                    <div className="flex items-center justify-center gap-1 relative z-10">
-                      <BsHandbag size={12} />
-                      <span>Chọn mua</span>
+                  <Button className="w-full uppercase text-[#22A6DF] border border-[#22A6DF] hover:!text-white relative z-10 overflow-hidden before:absolute before:top-0 before:left-[-100%] before:w-full before:h-full before:bg-[#22A6DF] before:transition-all before:duration-300 hover:before:left-0">
+                    <div className="flex items-center justify-center gap-2 relative z-10">
+                      <BsHandbag />
+                      <span>Mua ngay</span>
                     </div>
                   </Button>
                 </Link>

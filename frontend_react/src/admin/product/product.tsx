@@ -3,20 +3,14 @@ import {
   Card,
   Button,
   Table,
-  Modal,
-  Form,
-  Input,
-  Select,
   Space,
   Tag,
-  Upload,
   message,
 } from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   EditOutlined,
-  UploadOutlined,
 } from "@ant-design/icons";
 import { motion } from "framer-motion";
 import { Typography } from "antd";
@@ -24,7 +18,6 @@ import productsApi from "../../api/productsAPI";
 import ProductModal from "../components/productModal";
 
 const { Title } = Typography;
-const { Option } = Select;
 
 interface Product {
   key: string;
@@ -42,15 +35,13 @@ interface Product {
   brand_id?: string | { _id: string; brand_name?: string };
   tag_id?: string | { _id: string; tag_name?: string };
   discount?: number;
-  image_url?: string[];
-  extra_images?: string[];
+  images?: string[]; // Thay image_url và extra_images bằng images
   description?: string;
 }
 
 const ProductList: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -79,6 +70,7 @@ const ProductList: React.FC = () => {
       }
   
       const formattedProducts = productList.map((product: any) => {
+<<<<<<< Updated upstream
         const imageUrl = product.image_url?.[0];
         const formattedImageUrl = imageUrl
           ? imageUrl.startsWith("/images/products/")
@@ -86,12 +78,18 @@ const ProductList: React.FC = () => {
             : `/images/products/${imageUrl}` // Chưa có tiền tố, thêm vào
           : "/images/products/placeholder.jpg";
   
+=======
+        // Gộp image_url và extra_images thành images
+        const images = product.image_url || [];
+        const imageUrl = images[0] || "https://via.placeholder.com/150"; // Ảnh mặc định nếu không có
+
+>>>>>>> Stashed changes
         return {
           key: product._id,
           _id: product._id,
           productCode: product._id,
           name: product.name,
-          image: formattedImageUrl,
+          image: imageUrl, // Ảnh đầu tiên để hiển thị trong bảng
           quantity: product.quantity || 0,
           status: product.status,
           price: product.price,
@@ -102,8 +100,7 @@ const ProductList: React.FC = () => {
           brand_id: product.brand_id,
           tag_id: product.tag_id,
           discount: product.discount,
-          image_url: product.image_url,
-          extra_images: product.image_url?.slice(1),
+          images: images, // Truyền toàn bộ mảng ảnh vào images
           description: product.description || "Không có mô tả",
         };
       });
@@ -116,12 +113,11 @@ const ProductList: React.FC = () => {
     setLoading(false);
   };
 
-  // Thêm hàm handleHide để ẩn sản phẩm
   const handleHide = async (id: string) => {
     try {
       await productsApi.hide(id);
       message.success("Sản phẩm đã được ẩn thành công!");
-      fetchProducts(); // Làm mới danh sách sản phẩm
+      fetchProducts();
     } catch (error) {
       message.error("Lỗi khi ẩn sản phẩm!");
       console.error("Hide product error:", error);

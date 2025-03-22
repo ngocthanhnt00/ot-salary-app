@@ -224,7 +224,7 @@ export const getProductByCategoryID = async (req: Request, res: Response): Promi
 };
 
 export const uploadProductImage = async (req: Request, res: Response): Promise<void> => {
-  console.log('Received files:', req.files); // Debug
+  console.log('Received files:', req.files); 
   if (!req.files) {
     res.status(400).json({ message: 'No file uploaded' });
     return;
