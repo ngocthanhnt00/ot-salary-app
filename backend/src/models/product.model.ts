@@ -21,7 +21,7 @@ const productSchema: Schema<IProduct> = new Schema<IProduct>(
     category_id: {
       type: Schema.Types.ObjectId,
       ref: category,
-      autoPopulate: true, // .populate allow to access data of Object references
+      autoPopulate: true, 
       required: [true, 'category_id is required']
     },
     image_url: {
@@ -36,7 +36,10 @@ const productSchema: Schema<IProduct> = new Schema<IProduct>(
     },
     tag_id: {
       type: Schema.Types.ObjectId,
-      ref: tag
+      ref: tag,
+      autoPopulate: true, 
+
+      
     },
     status: {
       type: String,

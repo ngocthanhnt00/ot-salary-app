@@ -33,6 +33,7 @@ interface Product {
   name: string;
   image: string;
   quantity: number;
+  quantity_sold: number;
   status: string;
   price: string;
   category: string;
@@ -87,7 +88,9 @@ const ProductList: React.FC = () => {
           image: imageUrl,
           images: product.image_url || [],
           quantity: product.quantity || 0,
-          status: product.status, 
+          quantity_sold: product.quantity_sold || 0,
+
+          status: product.status,
           price: product.price,
           category: product.category_id?.name || "Không xác định",
           brand: product.brand_id?.brand_name || "Không có thương hiệu",
@@ -112,7 +115,7 @@ const ProductList: React.FC = () => {
     try {
       await productsApi.toggleStatus(productId, newStatus);
       message.success("Cập nhật trạng thái sản phẩm thành công!");
-      fetchProducts(); 
+      fetchProducts();
     } catch (error) {
       message.error("Lỗi khi cập nhật trạng thái sản phẩm!");
       console.error("Toggle status error:", error);
@@ -126,7 +129,7 @@ const ProductList: React.FC = () => {
       case "out_of_stock":
         return "Hết hàng";
       default:
-        return status; 
+        return status;
     }
   };
 
@@ -176,6 +179,9 @@ const ProductList: React.FC = () => {
       key: "tag",
       render: (tag: string) => (tag ? <Tag color="blue">{tag}</Tag> : null),
     },
+    { title: "Số lượng", dataIndex: "quantity", key: "quantity" },
+    { title: "Đã bán", dataIndex: "quantity_sold", key: "quantity_sold" },
+
     {
       title: "Chức năng",
       key: "action",

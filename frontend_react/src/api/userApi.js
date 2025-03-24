@@ -31,6 +31,12 @@ const userApi = {
             data: response.data,
         };
     },
+    getNewUser: async () => { 
+        const response = await api.get("/v1/users/new"); 
+        return {
+            data: response.data,
+        };
+    }
 };
 
 export default userApi;

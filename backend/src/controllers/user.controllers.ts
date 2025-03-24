@@ -182,3 +182,39 @@ export const addUserAddress = async (req: Request, res: Response): Promise<void>
     }
   }
 };
+export const getNewUser = async (req: Request, res: Response) => {
+  try {
+    const newUsers = await userModel
+      .find({ 
+        role: 'user',      // Chỉ lấy user có role là "user"
+        status: 'active'   // Chỉ lấy user có status là "active"
+      })
+      .select('-password') // Loại bỏ password khỏi kết quả
+      .sort({ createdAt: -1 }) // Sắp xếp giảm dần theo thời gian tạo
+      .limit(4); // Giới hạn 4 người dùng mới nhất
+
+    if (!newUsers || newUsers.length === 0) {
+      res.status(404).json({ success: false, message: 'Không tìm thấy người dùng nào' });
+      return;
+    }
+
+    // Xử lý status trước khi trả về
+    const formattedUsers = newUsers.map(user => ({
+      ...user.toObject(), // Chuyển từ Mongoose document sang plain object
+      status: user.status === 'active' ? 'Hoạt động' : user.status // Thay "active" bằng "Hoạt động"
+    }));
+
+    res.status(200).json({
+      success: true,
+      result: formattedUsers
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(`Error fetching new users: ${error.message}`);
+      res.status(500).json({ success: false, message: `Lỗi server: ${error.message}` });
+    } else {
+      console.error('Error fetching new users:', error);
+      res.status(500).json({ success: false, message: 'Internal Server Error' });
+    }
+  }
+};
