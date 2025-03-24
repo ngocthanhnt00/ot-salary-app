@@ -9,6 +9,7 @@ import { IProduct } from '@/interfaces/product.interface.js';
 
 export const getAllProduct = async (req: Request, res: Response): Promise<void> => {
   try {
+    
     const result = await productModel.find().populate('category_id').populate('brand_id').populate('tag_id');
     res.status(200).json({ success: true, result });
   } catch (error) {
@@ -462,5 +463,26 @@ export const toggleProductStatus = async (req: Request, res: Response): Promise<
   } catch (error) {
     console.error('Error toggling product status:', error);
     res.status(500).json({ message: 'Lỗi khi cập nhật trạng thái sản phẩm', error });
+  }
+};
+
+export const getProductOutStock = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await productModel
+      .find({ status: ProductStatus.OUT_OF_STOCK })
+      .populate('category_id')
+      .populate('brand_id')
+      .populate('tag_id');
+    console.log("Out of stock products:", result); // Log để kiểm tra
+
+    if (!result || result.length === 0) {
+      res.status(200).json({ success: true, data: [] }); 
+      return;
+    }
+
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    console.error("Error fetching out of stock products:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };

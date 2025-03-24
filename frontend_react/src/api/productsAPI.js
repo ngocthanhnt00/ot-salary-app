@@ -7,6 +7,12 @@ const productsApi = {
       data: response.data,
     };
   },
+  getProductOutStock: async () => {
+    const response = await api.get("/v1/products/status/outofstock");
+    return {
+      data: response.data,
+    };
+  },
   getNewProducts: async () => {
     const response = await api.get("/v1/newproducts");
     return {

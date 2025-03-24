@@ -176,6 +176,8 @@ const ProductList: React.FC = () => {
       key: "tag",
       render: (tag: string) => (tag ? <Tag color="blue">{tag}</Tag> : null),
     },
+    { title: "số lượng", dataIndex: "quantity", key: "quantity", width: 100 },
+
     {
       title: "Chức năng",
       key: "action",
