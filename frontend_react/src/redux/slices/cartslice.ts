@@ -1,6 +1,20 @@
 import { createSlice } from "@reduxjs/toolkit";
+// Lấy userId từ localStorage, đảm bảo trả về chuỗi hoặc null
 const getUserIdFromLocal = () => {
-  return localStorage.getItem("accountID") || null;
+  const userId = localStorage.getItem("accountID");
+  if (!userId) return null;
+
+  try {
+    // Nếu userId là chuỗi dạng JSON (ví dụ: "[...]" hoặc "{...}"), parse và lấy giá trị
+    const parsed = JSON.parse(userId);
+    if (Array.isArray(parsed)) {
+      return parsed[0]; // Lấy phần tử đầu tiên nếu là mảng
+    }
+    return parsed; // Nếu không phải mảng, trả về giá trị đã parse
+  } catch (e) {
+    // Nếu không parse được (tức là userId đã là chuỗi bình thường), trả về nguyên giá trị
+    return userId;
+  }
 };
 
 // Lấy toàn bộ cart từ localStorage, nếu không có thì trả về object rỗng

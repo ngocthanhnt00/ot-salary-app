@@ -1,8 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Key } from "react";
 import { motion } from "framer-motion";
-import axios from "axios";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   Sun,
   Moon,
@@ -15,9 +15,15 @@ import {
   MapPin,
   DollarSign,
 } from "lucide-react";
+import orderApi from "../../api/orders";
+import { clearProduct } from "../../redux/slices/cartslice";
 
 const Payment = () => {
+  const dispatch = useDispatch(); // Thêm useDispatch
+  const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // State để kiểm tra trạng thái đăng nhập
+
   interface Province {
     code: Key | null | undefined;
     packge: string;
@@ -65,12 +71,21 @@ const Payment = () => {
 
   // Payment methods data
   const paymentMethods = [
-    { id: "cod", label: "Thanh toán khi nhận hàng (COD)", icon: <DollarSign className="text-blue-500" /> },
+    { id: "", label: "Thanh toán khi nhận hàng (COD)", icon: <DollarSign className="text-blue-500" /> },
     { id: "bank_transfer", label: "Chuyển khoản qua ngân hàng", icon: <CreditCard className="text-green-500" /> },
     { id: "card", label: "Thanh toán qua thẻ ngân hàng", icon: <CreditCard className="text-purple-500" /> },
   ];
 
-  // Fetch provinces on component mount
+  // Kiểm tra token khi component mount
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken"); // Giả định token được lưu trong localStorage
+    if (token) {
+      setIsLoggedIn(true); // Nếu có token, người dùng đã đăng nhập
+    } else {
+      setIsLoggedIn(false); // Nếu không có token, người dùng chưa đăng nhập
+    }
+  }, []);
+
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
@@ -147,57 +162,82 @@ const Payment = () => {
   };
 
   const formatPrice = (price: number) => new Intl.NumberFormat("vi-VN").format(price) + "₫";
-
-  const handleCheckout = async () => {
-    if (!userId) {
-      alert("Vui lòng đăng nhập để tiến hành đặt hàng!");
-      return;
-    }
-    if (!formData.fullName || !formData.email || !formData.phone || !formData.address || !selectedProvince || !selectedDistrict || !selectedWard || !selectedShippingMethod) {
-      alert("Vui lòng điền đầy đủ thông tin giao hàng và chọn phương thức vận chuyển!");
-      return;
-    }
-    if (cartItems.length === 0) {
-      alert("Giỏ hàng của bạn đang trống!");
-      return;
-    }
-
-    try {
-      const shippingAddress = `${formData.address}, ${selectedWard.name}, ${selectedDistrict.name}, ${selectedProvince.name}`;
-      const orderData = {
-        userID: userId,
-        payment_typeID: selectedPayment,
-        deliveryID: selectedShippingMethod.id,
-        couponID: null,
-        orderdate: new Date().toISOString(),
-        total_price: calculateTotal(),
-        shipping_address: shippingAddress,
-        payment_status: selectedPayment === "cod" ? "pending" : "completed",
-        transaction_id: `TRANS_${Date.now()}`,
-        items: cartItems.map(item => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image,
-        })),
-      };
-
-      const response = await axios.post("http://localhost:5000/api/orders", orderData);
-      console.log("Order created:", response.data);
-
-      // Lưu đơn hàng vào localStorage
-      const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
-      existingOrders.push(orderData);
-      localStorage.setItem("orders", JSON.stringify(existingOrders));
-
-      alert("Đơn hàng của bạn đã được tạo thành công!");
-    } catch (error) {
-      console.error("Error creating order:", error);
-      alert("Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!");
-    }
-  };
-
+	const handleCheckout = async () => {
+		if (!userId) {
+			alert("Vui lòng đăng nhập để tiến hành đặt hàng!");
+			return;
+		}
+		if (
+			!formData.fullName ||
+			!formData.email ||
+			!formData.phone ||
+			!formData.address ||
+			!selectedProvince ||
+			!selectedDistrict ||
+			!selectedWard
+		) {
+			alert("Vui lòng điền đầy đủ thông tin giao hàng!");
+			return;
+		}
+		if (cartItems.length === 0) {
+			alert("Giỏ hàng của bạn đang trống!");
+			return;
+		}
+	
+		try {
+			const shippingAddress = `${formData.address}, ${selectedWard.name}, ${selectedDistrict.name}, ${selectedProvince.name}`;
+			const orderData = {
+				userID: userId,
+				couponID: null,
+				orderdate: new Date().toISOString(),
+				total_price: calculateTotal(),
+				shipping_address: shippingAddress,
+				payment_status: selectedPayment === "cod" ? "pending" : "completed",
+				transaction_id: `TRANS_${Date.now()}`,
+				orderDetails: cartItems.map((item) => ({
+					productID: item.id,
+					serviceID: null,
+					quantity: item.quantity,
+					product_price: item.price,
+				})),
+			};
+	
+			// Kiểm tra dữ liệu trước khi gửi
+			console.log("Cart items before order:", cartItems); // Log để kiểm tra cartItems
+			console.log("Sending order data:", orderData);     // Log dữ liệu gửi lên
+	
+			const response = await orderApi.create(orderData);
+			console.log("Order created:", response);
+	
+			// Lưu vào localStorage
+			const existingOrders = JSON.parse(localStorage.getItem("orders") || "[]");
+			existingOrders.push(orderData); // Đẩy toàn bộ orderData vào mảng
+			localStorage.setItem("orders", JSON.stringify(existingOrders));
+	
+			// Kiểm tra dữ liệu sau khi lưu
+			console.log("Orders in localStorage:", JSON.parse(localStorage.getItem("orders") || "[]"));
+	
+			// Reset form và giỏ hàng
+			setFormData({
+				fullName: "",
+				email: "",
+				phone: "",
+				address: "",
+			});
+			setSelectedProvince(null);
+			setSelectedDistrict(null);
+			setSelectedWard(null);
+	
+			dispatch(clearProduct()); // Xóa giỏ hàng sau khi lưu
+	
+			alert("Đơn hàng của bạn đã được tạo thành công!");
+			navigate("/"); // Chuyển hướng về trang chủ
+		} catch (error) {
+			console.error("Error creating order:", error);
+			console.log("Error response:", error.response?.data);
+			alert("Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại!");
+		}
+	};
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-800"}`}>
       <motion.button
@@ -225,12 +265,19 @@ const Payment = () => {
           </div>
         </nav>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`mb-8 rounded-xl p-4 ${darkMode ? "bg-blue-900/30" : "bg-blue-50"}`}>
-          <span>
-            Bạn đã có tài khoản?{" "}
-            <span className="ml-1 cursor-pointer font-bold text-blue-500 hover:text-blue-600">Đăng nhập</span>
-          </span>
-        </motion.div>
+        {/* Ẩn phần "Bạn đã có tài khoản? Đăng nhập" nếu đã đăng nhập */}
+        {!isLoggedIn && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-8 rounded-xl p-4 ${darkMode ? "bg-blue-900/30" : "bg-blue-50"}`}
+          >
+            <span>
+              Bạn đã có tài khoản?{" "}
+              <span className="ml-1 cursor-pointer font-bold text-blue-500 hover:text-blue-600">Đăng nhập</span>
+            </span>
+          </motion.div>
+        )}
 
         <div className="flex flex-col gap-8 lg:flex-row">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="w-full lg:w-3/5">
