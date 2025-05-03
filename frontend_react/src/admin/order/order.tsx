@@ -12,6 +12,10 @@ import {
   message,
   Space,
   DatePicker,
+  Typography,
+  Badge,
+  Avatar,
+  Tooltip,
 } from 'antd';
 import {
   DeleteOutlined,
@@ -19,6 +23,9 @@ import {
   SearchOutlined,
   ReloadOutlined,
   DownloadOutlined,
+  ShoppingCartOutlined,
+  UserOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import orderApi from '../../api/orderApi';
@@ -26,6 +33,7 @@ import moment from 'moment';
 import 'moment/locale/vi';
 import { CSVLink } from 'react-csv';
 
+const { Title } = Typography;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
@@ -58,11 +66,11 @@ interface FilterParams {
 }
 
 const OrderList: React.FC = () => {
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filters, setFilters] = useState<FilterParams>({});
   const [form] = Form.useForm();
 
@@ -84,8 +92,6 @@ const OrderList: React.FC = () => {
       }
 
       const orderDetails = response.data.result;
-
-      // Group order details by orderId
       const groupedOrders: { [key: string]: any } = {};
 
       orderDetails.forEach((detail: any) => {
@@ -106,13 +112,12 @@ const OrderList: React.FC = () => {
           productId: detail.productId?._id || null,
           productName: detail.productId?.name || 'Không xác định',
           productPrice: detail.product_price || 0,
-          productImage: null, // API response doesn't include product image; adjust if available
+          productImage: null,
           quantity: detail.quantity || 0,
           totalPrice: detail.total_price || 0,
         });
       });
 
-      // Convert grouped orders to the Order interface
       const formattedOrders: Order[] = Object.values(groupedOrders).map((order: any, index: number) => ({
         key: order.orderId || `order-${index}`,
         orderId: order.orderId || `ORDER${index}`,
@@ -129,11 +134,7 @@ const OrderList: React.FC = () => {
       setOrders(filteredOrders);
     } catch (error) {
       console.error('Error fetching orders:', error.response?.data || error.message);
-      message.error(
-        error.response?.status === 404
-          ? 'Không tìm thấy API đơn hàng'
-          : 'Tải danh sách đơn hàng thất bại'
-      );
+      message.error('Tải danh sách đơn hàng thất bại');
       setOrders([]);
     } finally {
       setLoading(false);
@@ -250,13 +251,11 @@ const OrderList: React.FC = () => {
       ),
     },
     {
-      title: 'Mã đơn hàng',
-      dataIndex: 'orderId',
-      key: 'orderId',
-      render: (text: string) => (
-        <span className="text-[14px] font-normal text-gray-700">
-          {text ? text.substring(0, 8) : 'N/A'}...
-        </span>
+      title: 'STT',
+      dataIndex: 'index',
+      width: 70,
+      render: (_: any, __: any, index: number) => (
+        <span className="text-gray-600 font-medium">{index + 1}</span>
       ),
     },
     {
@@ -264,56 +263,77 @@ const OrderList: React.FC = () => {
       dataIndex: 'fullname',
       key: 'fullname',
       render: (text: string) => (
-        <div className="flex items-center">
-          <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center">
-            <span className="text-sm text-blue-500">{text ? text.charAt(0).toUpperCase() : '?'}</span>
+        <div className="flex items-center space-x-3">
+          <Avatar 
+            className="bg-blue-400"
+            icon={<UserOutlined />}
+          />
+          <div>
+            <div className="font-medium text-gray-800">{text}</div>
+            <div className="text-xs text-gray-500">Khách hàng</div>
           </div>
-          <span className="ml-3 text-[14px] font-normal text-gray-700">{text || 'Không xác định'}</span>
         </div>
       ),
     },
     {
-      title: 'Đơn hàng',
+      title: 'Thông tin đơn hàng',
       dataIndex: 'product',
       key: 'product',
-      render: (text: string) => (
-        <span className="text-[14px] font-normal text-gray-700">{text}</span>
+      render: (text: string, record: Order) => (
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <ShoppingCartOutlined className="text-blue-500" />
+            <span className="font-medium text-gray-800 truncate max-w-xs">
+              {text}
+            </span>
+          </div>
+          <div className="flex items-center space-x-2 text-xs text-gray-500">
+            <CalendarOutlined />
+            <span>{record.orderDate}</span>
+          </div>
+        </div>
       ),
     },
     {
-      title: 'Tình trạng',
+      title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => {
         const statusConfig = {
-          PENDING: { color: 'warning', text: 'Chờ xử lý' },
-          PROCESSING: { color: 'processing', text: 'Đang xử lý' },
-          SHIPPING: { color: 'blue', text: 'Đang vận chuyển' },
-          SHIPPED: { color: 'cyan', text: 'Đã giao hàng' },
-          DELIVERED: { color: 'success', text: 'Đã giao' },
-          CANCELLED: { color: 'error', text: 'Đã hủy' },
+          PENDING: { color: '#faad14', text: 'Chờ xử lý', dotColor: 'warning' },
+          PROCESSING: { color: '#1890ff', text: 'Đang xử lý', dotColor: 'processing' },
+          SHIPPING: { color: '#52c41a', text: 'Đang vận chuyển', dotColor: 'success' },
+          SHIPPED: { color: '#13c2c2', text: 'Đã giao hàng', dotColor: 'success' },
+          DELIVERED: { color: '#52c41a', text: 'Đã giao', dotColor: 'success' },
+          CANCELLED: { color: '#ff4d4f', text: 'Đã hủy', dotColor: 'error' },
         };
+
         return (
-          <Tag
-            color={statusConfig[status]?.color}
-            className="px-3 py-0.5 text-[13px] font-normal rounded-full"
-          >
-            {statusConfig[status]?.text || status}
-          </Tag>
+          <Badge
+            status={statusConfig[status]?.dotColor as any}
+            text={
+              <span style={{ color: statusConfig[status]?.color }}>
+                {statusConfig[status]?.text}
+              </span>
+            }
+          />
         );
       },
     },
     {
-      title: 'Tính năng',
+      title: 'Thao tác',
       key: 'action',
       render: (_: any, record: Order) => (
-        <Button
-          type="primary"
-          icon={<EyeOutlined />}
-          onClick={() => handleView(record)}
-          size="small"
-          className="bg-blue-400 hover:bg-blue-500 rounded-md"
-        />
+        <Space>
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="primary"
+              icon={<EyeOutlined />}
+              onClick={() => handleView(record)}
+              className="bg-blue-500 hover:bg-blue-600"
+            />
+          </Tooltip>
+        </Space>
       ),
     },
   ];
@@ -328,25 +348,29 @@ const OrderList: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         <Card
           bordered={false}
-          className="shadow-sm bg-white rounded-lg"
+          className="shadow-lg rounded-lg overflow-hidden"
           title={
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex-1 max-w-md">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              {/* <Title level={4} className="mb-0">
+                Quản lý đơn hàng
+              </Title> */}
+              <div className="flex-1 lg:max-w-md">
                 <Input.Search
                   placeholder="Tìm kiếm đơn hàng..."
                   allowClear
                   enterButton
                   onSearch={handleSearch}
                   className="rounded-lg"
+                  size="large"
                 />
               </div>
-              <Space wrap>
+              <Space wrap className="flex-shrink-0">
                 <Select
-                  placeholder="Lọc trạng thái"
+                  placeholder="Trạng thái"
                   allowClear
                   style={{ width: 150 }}
                   onChange={handleStatusFilter}
-                  className="text-[14px]"
+                  size="large"
                 >
                   <Option value="PENDING">Chờ xử lý</Option>
                   <Option value="PROCESSING">Đang xử lý</Option>
@@ -358,12 +382,14 @@ const OrderList: React.FC = () => {
                 <RangePicker
                   onChange={handleDateRangeFilter}
                   format="DD/MM/YYYY"
-                  className="text-[14px]"
+                  size="large"
+                  placeholder={['Ngày bắt đầu', 'Ngày kết thúc']}
                 />
                 <Button
                   icon={<ReloadOutlined />}
                   onClick={() => fetchOrders()}
-                  className="border border-gray-100 hover:border-gray-200 rounded-md text-[14px]"
+                  size="large"
+                  className="hover:bg-gray-50"
                 >
                   Làm mới
                 </Button>
@@ -372,14 +398,14 @@ const OrderList: React.FC = () => {
                   icon={<DeleteOutlined />}
                   onClick={handleDeleteAll}
                   disabled={selectedRows.length === 0}
-                  className="bg-red-50 hover:bg-red-100 border border-gray-100 rounded-md text-[14px]"
+                  size="large"
                 >
                   Xóa ({selectedRows.length})
                 </Button>
                 <CSVLink
                   data={orders}
                   filename="orders.csv"
-                  className="flex items-center text-[14px] text-gray-700 hover:text-gray-900"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   <DownloadOutlined className="mr-2" />
                   Xuất CSV
@@ -398,8 +424,9 @@ const OrderList: React.FC = () => {
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total) => `Tổng ${total} đơn hàng`,
+              className: "mt-4"
             }}
-            className="overflow-hidden rounded-lg"
+            className="ant-table-custom"
             rowClassName="hover:bg-gray-50"
             scroll={{ x: true }}
           />
@@ -431,15 +458,15 @@ const OrderList: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <div className="p-4 bg-gray-50 rounded-lg">
-                      <h3 className="font-medium text-gray-800 mb-4 text-[15px]">Thông tin đơn hàng</h3>
+                      <h3 className="font-medium text-gray-800 mb-4">Thông tin đơn hàng</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <p className="text-[13px] text-gray-500">Mã đơn hàng</p>
-                          <p className="text-[14px] font-normal text-gray-700">{selectedOrder.orderId}</p>
+                          <p className="text-sm text-gray-500">Mã đơn hàng</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedOrder.orderId}</p>
                         </div>
                         <div>
-                          <p className="text-[13px] text-gray-500">Ngày đặt</p>
-                          <p className="text-[14px] font-normal text-gray-700">{selectedOrder.orderDate}</p>
+                          <p className="text-sm text-gray-500">Ngày đặt</p>
+                          <p className="text-sm font-medium text-gray-700">{selectedOrder.orderDate}</p>
                         </div>
                       </div>
                     </div>
@@ -448,31 +475,31 @@ const OrderList: React.FC = () => {
                   <div className="col-span-2">
                     {selectedOrder?.products && selectedOrder.products.length > 0 ? (
                       <div className="p-4 bg-gray-50 rounded-lg max-h-60 overflow-y-auto">
-                        <h3 className="font-medium text-gray-800 mb-4 text-[15px]">Danh sách sản phẩm</h3>
+                        <h3 className="font-medium text-gray-800 mb-4">Danh sách sản phẩm</h3>
                         {selectedOrder.products.map((product: Product, index: number) => (
                           <div key={index} className="grid grid-cols-2 gap-4 mb-4">
                             <div>
-                              <p className="text-[13px] text-gray-500">ID Sản phẩm</p>
-                              <p className="text-[14px] font-normal text-gray-700">{product.productId || 'Không xác định'}</p>
+                              <p className="text-sm text-gray-500">Tên sản phẩm</p>
+                              <p className="text-sm font-medium text-gray-700">{product.productName}</p>
                             </div>
                             <div>
-                              <p className="text-[13px] text-gray-500">Tên sản phẩm</p>
-                              <p className="text-[14px] font-normal text-gray-700">{product.productName || 'Không xác định'}</p>
+                              <p className="text-sm text-gray-500">Số lượng</p>
+                              <p className="text-sm font-medium text-gray-700">{product.quantity}</p>
                             </div>
                             <div>
-                              <p className="text-[13px] text-gray-500">Số lượng</p>
-                              <p className="text-[14px] font-normal text-gray-700">{product.quantity || '0'}</p>
+                              <p className="text-sm text-gray-500">Đơn giá</p>
+                              <p className="text-sm font-medium text-gray-700">{product.productPrice.toLocaleString()} VNĐ</p>
                             </div>
                             <div>
-                              <p className="text-[13px] text-gray-500">Giá</p>
-                              <p className="text-[14px] font-normal text-gray-700">{product.productPrice || '0'} VNĐ</p>
+                              <p className="text-sm text-gray-500">Thành tiền</p>
+                              <p className="text-sm font-medium text-gray-700">{product.totalPrice.toLocaleString()} VNĐ</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-[14px] text-gray-500">Không có sản phẩm trong đơn hàng</p>
+                        <p className="text-sm text-gray-500">Không có sản phẩm trong đơn hàng</p>
                       </div>
                     )}
                   </div>
@@ -484,7 +511,7 @@ const OrderList: React.FC = () => {
                         name="status"
                         rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
                       >
-                        <Select className="w-full text-[14px]">
+                        <Select className="w-full">
                           <Option value="PENDING">Chờ xử lý</Option>
                           <Option value="PROCESSING">Đang xử lý</Option>
                           <Option value="SHIPPING">Đang vận chuyển</Option>
